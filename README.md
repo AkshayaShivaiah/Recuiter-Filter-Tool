@@ -1,13 +1,18 @@
-# Recuiter-Filter-Tool
-A R tool which can help the recruiters to filter through a huge list of contacts to a list of prospective candidates based on their work experience and position.
+
 The code below allows the recuiters to upload their input file consisting the list of candidates and a list a companies to filter. They can also filter by the candidate's position.
+
 rm(list=ls())
-#install.packages("slam")
+
 library(dplyr)
+
 library(magrittr)
+
 library(tidyr)
+
 library(stringr)
+
 library(tm)
+
 library(slam)
 
 candidatelist <- read_excel(" ", sheet=" ")
