@@ -1,0 +1,108 @@
+# This is a Shiny web application. You can run the application by clicking
+# the 'Run App' button above.
+#
+# Find out more about building applications with Shiny here:
+#
+#    http://shiny.rstudio.com/
+#
+
+
+library(shiny)
+library(readxl)
+library(magrittr)
+library(stringr)
+library(dplyr)
+library(digest)
+
+# Define UI for application- #DATA,#UNIQUE DATA, # DATA FILTER
+ui <- navbarPage(
+  "Recruitment Filtering Tool",
+  tabPanel("Data",
+           fluidPage(
+             # Sidebar with a slider input  
+             sidebarLayout(
+               sidebarPanel(
+                 fileInput("file", "Choose your file")
+               ),
+               # Main panel for displaying outputs
+               mainPanel(
+                 tabsetPanel(type = "tabs",
+                             tabPanel("Complete Data",fluidRow(column(4, uiOutput("sheet_names"))),
+                                      fluidRow(column(4, tableOutput("value"))))
+                 )
+               )
+             )
+           )),
+  tabPanel("Unique Data",
+           fluidPage(
+             tableOutput("unique")
+           )
+  ),
+  tabPanel("Data Filters",
+           fluidPage(
+             sidebarLayout(
+               sidebarPanel(
+                 fileInput("filter_file_company", "Choose Company Filter File"),
+                 fileInput("filter_file_position", "Choose Position Filter File")),
+               actionButton(inputId = "btn",label="Write Data")
+             ),
+             mainPanel(
+               tableOutput("filter")
+             )
+           ))
+)
+
+
+# Define server logic 
+server <- function(input, output) {
+  output$sheet_names <- renderUI({validate(
+    need(input$file != "", "Please select a data set")
+  )
+    name <- input$file
+    selectInput("sheets","Sheet Name",excel_sheets(name$datapath))
+  })
+  
+  output$value <- renderTable({validate(
+    need(input$file != "", "Data set will be displayed here")
+  )
+    name <- input$file
+    rec <- read_xlsx(name$datapath,sheet = input$sheets)
+    rec <- mutate_each(rec,funs(toupper))
+  })
+  
+  
+  
+  output$unique <- renderTable({validate(
+    need(input$file != "", "The Unique list of Positions will be displayed")
+  )
+    name <- input$file
+    rec <- read_xlsx(name$datapath,sheet = input$sheets)
+    rec <- mutate_each(rec,funs(toupper))
+    unique(rec$Position)
+  })
+  data <- reactive({
+    name <- input$file
+    rec <- as.data.frame(read_xlsx(name$datapath,sheet = input$sheets))
+    rec <- mutate_each(rec,funs(toupper))
+    filter_name <- input$filter_file_company
+    filter_record <- as.data.frame(read.csv(filter_name$datapath))
+    filter_record <- mutate_each(filter_record,funs(toupper))
+    record_comp <- rec[rec$Company  %in% filter_record$Company,]
+    filter_name_pos <- input$filter_file_position
+    filter_record_pos <- as.data.frame(read.csv(filter_name_pos$datapath))
+    filter_record_pos <- mutate_each(filter_record_pos,funs(toupper))
+    record_pos <- record_comp[record_comp$Position  %in% filter_record_pos$Position,]
+  })
+  
+  output$filter <- renderTable(({validate(
+    need(input$file != "", "Please select a data set")
+  )
+    data()
+  }))
+  observeEvent(input$btn,{
+    fileName <- sprintf("Filter_%s_%s.csv",as.character(input$sheets) , as.Date(Sys.time()))
+    write.csv(x= data(),file = file.path("C:/Users",fileName))})
+}
+
+# Run the application 
+shinyApp(ui = ui, server = server)
