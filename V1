@@ -1,0 +1,41 @@
+rm(list=ls())
+#install.packages("slam")
+library(dplyr)
+library(magrittr)
+library(tidyr)
+library(stringr)
+library(tm)
+library(slam)
+
+rec <- read_excel(" ", sheet=" ")
+f500 <-read.csv(" ")
+#names(f500)
+
+#rec= rec[,c(1,2,4,5)]
+colnames(rec)=c("Fname","Lname","Company","Position")
+
+rec <- mutate_each(rec,funs(toupper))%>%
+  unite("Name",Fname,Lname,sep = " ")
+
+f500 <- mutate_each(f500,funs(toupper))
+#colnames(rec)
+
+#company_filter 
+rec1= rec[rec$Company %in% f500$Company,]
+#rec= rec[!rec$Position %in% pos$ï..Position,]
+
+
+selected_list <- setNames(data.frame(matrix(ncol = 3)), c("Name", "Company", "Position"))
+want_more = "YES"
+
+while(want_more == "YES"){
+  pos = readline(prompt = "Enter the position:")
+  for(i in range(length(rec))){
+    df = rec[str_detect(rec$Position,pos),]
+  }
+  selected_list <- rbind(selected_list,df)
+  rec= rec[!rec$Position  %in% selected_list$Position,]
+  want_more = readline(prompt = "Want to Filter Again:")
+}
+
+newdata <- selected_list[order(selected_list$Name),]
