@@ -1,36 +1,41 @@
-# History files
-.Rhistory
-.Rapp.history
+rm(list=ls())
+#install.packages("slam")
+library(dplyr)
+library(magrittr)
+library(tidyr)
+library(stringr)
+library(tm)
+library(slam)
 
-# Session Data files
-.RData
+rec <- read_excel(" ", sheet=" ")
+f500 <-read.csv(" ")
+#names(f500)
 
-# Example code in package build process
-*-Ex.R
+#rec= rec[,c(1,2,4,5)]
+colnames(rec)=c("Fname","Lname","Company","Position")
 
-# Output files from R CMD build
-/*.tar.gz
+rec <- mutate_each(rec,funs(toupper))%>%
+  unite("Name",Fname,Lname,sep = " ")
 
-# Output files from R CMD check
-/*.Rcheck/
+f500 <- mutate_each(f500,funs(toupper))
+#colnames(rec)
 
-# RStudio files
-.Rproj.user/
+#company_filter 
+rec1= rec[rec$Company %in% f500$Company,]
+#rec= rec[!rec$Position %in% pos$ï..Position,]
 
-# produced vignettes
-vignettes/*.html
-vignettes/*.pdf
 
-# OAuth2 token, see https://github.com/hadley/httr/releases/tag/v0.3
-.httr-oauth
+selected_list <- setNames(data.frame(matrix(ncol = 3)), c("Name", "Company", "Position"))
+want_more = "YES"
 
-# knitr and R markdown default cache directories
-/*_cache/
-/cache/
+while(want_more == "YES"){
+  pos = readline(prompt = "Enter the position:")
+  for(i in range(length(rec))){
+    df = rec[str_detect(rec$Position,pos),]
+  }
+  selected_list <- rbind(selected_list,df)
+  rec= rec[!rec$Position  %in% selected_list$Position,]
+  want_more = readline(prompt = "Want to Filter Again:")
+}
 
-# Temporary files created by R markdown
-*.utf8.md
-*.knit.md
-
-# Shiny token, see https://shiny.rstudio.com/articles/shinyapps.html
-rsconnect/
+newdata <- selected_list[order(selected_list$Name),]
