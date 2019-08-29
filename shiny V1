@@ -1,0 +1,78 @@
+#
+# Run the application by clicking the 'Run App' button above.
+# 
+#
+
+
+library(shiny)
+library(readxl)
+library(magrittr)
+library(stringr)
+
+# Define UI for application- #COMPLETE DATA, #FILTER DATA
+ui <- navbarPage(
+  "Filtering Tool",
+  
+  tabPanel("Complete Data",
+  fluidPage(
+   # Sidebar with a slider input for 1st page(# Sidebar layout with input and output definitions)
+   sidebarLayout(
+     # Sidebar panel for inputs 
+      sidebarPanel(
+        fileInput("file", label = h3("Choose your file"))
+        ),
+      # Main panel for displaying outputs
+      mainPanel(
+        tabsetPanel(type = "tabs",
+                    tabPanel("Complete Data",fluidRow(column(4, uiOutput("sheet_names"))),
+                                             fluidRow(column(4, tableOutput("value"))))
+        )
+      )
+   )
+)),
+  tabPanel("Filter Data",
+           fluidPage(
+             sidebarLayout(
+               sidebarPanel(
+                 fluidRow(column(12,textInput("text", label = h3("Filter Position"), value = "Enter text..."))
+             ),
+             fluidRow(column(12,textInput("text1", label = h3("Filter Company"), value = "Enter text..."))
+             )
+             ),
+             mainPanel(
+               tableOutput("filter")
+             )
+           ))
+  )
+)
+
+# Define server logic
+server <- function(input, output) {
+  output$sheet_names <- renderUI({validate(
+    need(input$file != "", "Please select a data set")
+  )
+    name <- input$file
+    selectInput("sheets","Sheet Name",excel_sheets(name$datapath))
+  })
+  
+  output$value <- renderTable({validate(
+    need(input$file != "", "Please select a data set")
+  )
+    name <- input$file
+    read_xlsx(name$datapath,sheet = input$sheets)
+  })
+
+  output$filter <- renderTable({validate(
+    need(input$file != "", "Please select a data set")
+  )
+    name <- input$file
+    rec <- as.data.frame(read_xlsx(name$datapath,sheet = input$sheets))
+    rec1 <- rec[str_detect(rec$Position,input$text),]
+    rec1[str_detect(rec1$Company,input$text1),]
+  })
+
+}
+
+# Run the application 
+shinyApp(ui = ui, server = server)
+
