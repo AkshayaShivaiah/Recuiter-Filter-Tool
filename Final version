@@ -1,0 +1,153 @@
+#
+# This is a Shiny web application. You can run the application by clicking
+# the 'Run App' button above.
+#
+# Find out more about building applications with Shiny here:
+#
+#    http://shiny.rstudio.com/
+#
+
+#libraries
+
+library(shiny)
+library(readxl)
+library(magrittr)
+install.packages("stringr")
+library(stringr)
+library(dplyr)
+library(digest)
+install.packages("DescTools")
+library(DescTools)
+
+# Define UI for application 
+
+ui <- navbarPage(
+  "RECRUITMENT FILTER TOOL",
+  tabPanel("INTRODUCTION",label= h3("app"),
+           br(),
+           br(),
+           p("OVERVIEW",style = "font-size:30px", align= "center"),
+           br(),
+           p("The Recruitment Filter Tool enables you to quickly filter a list of LinkedIn ",style = "font-size:17px", align= "center"),
+           p("connections to a targeted list of potential candidates.  ",style = "font-size:17px", align= "center"),
+           #p("(1b.Alternatively the company list can be created by the user and can be used as input to filter through the candidates)",style = "font-size:17px", align= "center"),
+           #p("2.The candidates should have had experience working in the respective fields that are entered as inputs under 'Enter Positions' ",style = "font-size:17px", align= "center"),
+           
+           
+           br(),
+           br(),
+           p("INSTRUCTIONS",style = "font-size:22px", align= "center"),
+           br(),
+           p("STEP1: Upload an Excel file with a list of LinkedIn connections and their details (i.e. company, position, etc.) on the DATA INPUT tab. Note: This must be an Excel file. ", align= "center"),
+           p("STEP2: Upload a file with the list of company names that you'd like to target. Upload this file in the 'Company Filter' sidebar panel on the DATA FILTER tab.", align= "center"),
+           p("STEP3: Enter the positions of interest in the 'Enter Positions' sidebar panel on the DATA FILTER tab", align= "center"),
+           p("STEP4: Click on DOWNLOAD FILE once you've filtered the data to your desired list ", align= "center"),
+           
+           br(),
+           br(),
+           p("NOTE:", align= "center"),
+           p(" If your Excel file has multiple sheets, you can toggle through them under 'Sheet Names' on the DATA INPUT tab (The output displayed will change dynamically as you toggle through the sheet names)",style ="font-style: italic", align= "center"),
+           p(" Any number of positions can be entered separated by a comma(,)  ",style ="font-style: italic", align= "center"),
+           p(" The file will be downloaded into the location where the code is saved ",style ="font-style: italic", align= "center"),
+           p(" The downloaded file would be saved under the name of that particular tab in the excel file that was uploaded into DATA INPUT tab ",style ="font-style: italic", align= "center")),
+  
+  
+  
+  
+  
+  tabPanel("DATA INPUT",
+           fluidPage(
+             
+             sidebarLayout(
+               sidebarPanel(
+                 fileInput("file", label = h3("Choose Input File"))
+               ),
+               
+               mainPanel(
+                 tabsetPanel(type = "tabs",
+                             tabPanel("DATA INPUT",fluidRow(column(4, uiOutput("sheet_names"))),
+                                      fluidRow(column(4, tableOutput("value"))))
+                 )
+               )
+             )
+           )
+  ),
+  
+  tabPanel("DATA FILTER",
+           fluidPage(
+             sidebarLayout(
+               sidebarPanel(
+                 fileInput("filter_file_company", label = h3("Choose Company Filter File")),
+                 textInput("text",label = h3("Enter Positions"),value = "Enter text ...."),
+                 actionButton(inputId = "btn",label="DOWNLOAD FILE")
+               ),
+               mainPanel(
+                 tableOutput("filter")
+               )
+             )
+           )
+  )
+)
+
+
+
+# Define server logic required 
+server <- function(input, output) {
+  output$sheet_names <- renderUI({
+    validate(
+      need(input$file != "", " ")
+    )
+    name <- input$file
+    selectInput("sheets","Sheet Name",excel_sheets(name$datapath))
+  })
+  
+  output$value <- renderTable({
+    validate(
+      need(input$file != "", "Please select the input file- Excel Only")
+    )
+    name <- input$file
+    rec <- read_xlsx(name$datapath,sheet = input$sheets)
+    rec <- mutate_each(rec,funs(toupper))
+  })
+  
+  
+  data <- reactive({
+    name <- input$file
+    rec <- as.data.frame(read_xlsx(name$datapath,sheet = input$sheets))
+    rec <- mutate_each(rec,funs(toupper))
+    filter_name <- input$filter_file_company
+    filter_record <- as.data.frame(read.csv(filter_name$datapath))
+    filter_record <- mutate_each(filter_record,funs(toupper))
+    record_comp <- rec[rec$Company  %in% filter_record$Company,]
+    filter_name_pos <-as.vector(strsplit(input$text,',')[[1]])
+    filter_record_pos <- toupper(filter_name_pos)
+    record_pos <- data.frame()
+    for(val in filter_record_pos){
+      record_po <- record_comp[str_detect(record_comp$Position,val),]
+      
+      record_pos <- rbind(record_pos,record_po)
+    }
+    record_pos
+  })
+  
+  output$filter <- renderTable(({
+    validate(
+      need(input$file != "", "Please give input in DATA INPUT tab and then proceed to this tab")
+    )
+    validate(
+      need(input$filter_file_company != "", "Please select file and give input")
+    )
+    data()
+  }))
+  
+  #Write the data
+  observeEvent(input$btn,{
+    fileName <- sprintf("%s_%s.csv",as.character(input$sheets) , as.Date(Sys.time()))
+    write.csv(x= data(),file = fileName)})
+}
+
+# Run the application 
+shinyApp(ui = ui, server = server)
+
+
+
